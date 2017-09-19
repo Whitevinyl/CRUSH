@@ -24,7 +24,6 @@ var lastPalette = 0;
 var paint;
 var imgData;
 
-var addNoise = false;
 
 // 3 white/cream
 // 4 dark

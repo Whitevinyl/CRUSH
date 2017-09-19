@@ -1,3 +1,4 @@
+
 function Paint(ctx,width,height,scale,col1,col2,col3,contrast,banding) {
 
     this.i = -1;
@@ -10,67 +11,42 @@ function Paint(ctx,width,height,scale,col1,col2,col3,contrast,banding) {
     this.col3 = col3;
 
 
-    this.thickness = 3;
-
     // generate texture //
-    //noise.seed(Math.random());
+    this.thickness = 1;
     this.simplex = new SimplexNoise();
     this.height = Math.ceil(height);
     this.width = Math.ceil(width);
-
-
     this.contrast = contrast * 100;
-    this.streakIndex = 0;
-    this.rowOffset = 0;
 
 
     // make scale relative to canvas size //
     scale *= (Math.max(this.width,this.height)/(255 * ratio));
-
-
     this.scale = scale * 400;
 
     // perlin scales //
-    this.heightX = this.scale * 1.5;
-    this.heightY = this.scale * 2;
-    this.wobbleX = this.scale / 2;
-    this.wobbleY = this.scale / 1.5;
-    this.driftY = this.scale * 1.6;
-    this.colorY = this.scale * 2;
-    this.mapDiv = this.scale * 1.1;
-    this.mapDiv2 = this.scale * 1.4;
-    this.mapDiv3 = this.scale * 0.8;
-    this.ridgeMult = this.scale * 0.002;
-    this.ridgeMult2 = this.scale * 0.02;
-    this.ridgeMult3 = this.scale * 0.1;
-    this.ridgeScale = 0.1;
-    this.mapScale = 1;
+    this.mapScale = 1.1 * this.scale;
+    this.s1a = 20 * this.scale;
+    this.s1b = 0.25 * this.scale;
+    this.s2a = 30 * this.scale;
+    this.s2b = 0.2 * this.scale;
+    this.s3a = 50 * this.scale;
+    this.s3b = 0.3 * this.scale;
+    this.wiggle = 0.08 * this.scale;
+    this.undulate = 1.35 * this.scale;
 
+    // ridge data & feedback //
     this.feedback = tombola.range(1,4);
-    /*this.feedbackShift = [];
-    for (var i=0; i<this.feedback; i++) {
-        this.feedbackShift.push(tombola.percent(50));
-    }
-    console.log(this.feedbackShift);*/
-
     var dl = tombola.range(250, 350);
     this.ridgeDataLength = dl;
     this.ridgeData = [];
     var jump = 1.5;
     var rd = tombola.rangeFloat(-1, 1);
-    var peak = 0;
     for (var i=0; i<=this.ridgeDataLength; i++) {
         rd += tombola.fudgeFloat(30, 0.01); // jitter
         if (tombola.percent(6)) rd += tombola.moveFloat(jump/3, jump); // jump
         rd = valueInRange(rd, -1, 1);
         this.ridgeData.push( rd );
-        if (Math.abs(rd) > peak) peak = Math.abs(rd);
     }
-
-    /*var norm = 1/peak;
-    for (var i=0; i<=this.ridgeDataLength; i++) {
-        this.ridgeData[i] *= norm;
-    }*/
 
     this._newRow();
 }
@@ -85,31 +61,28 @@ Paint.prototype.draw = function(speed) {
     if (this.i < this.height) {
         var ctx = this.ctx;
 
-        var s = this.scale;
-
         // loop through rows * speed //
         var l = this.width * speed;
         for (var h=0; h<l; h++) {
 
             // perlin noise offset //
-            var n = this.simplex.noise(this.j / (1.1 * s), 3000 + (this.i / (1.1 * s)));
-            //n = mix(n, this.simplex.noise(3000 + (this.j / (1.0 * s)), this.i / (1.0 * s)), 0.02);
-            n = mix(n, this.simplex.noise(6000 + (this.j / (20 * s)), 6000 + (this.i / (0.25 * s))), 0.025);
-            n = mix(n, this.simplex.noise(6000 + (this.j / (0.25 * s)), 6000 + (this.i / (20 * s))), 0.025);
-            n = mix(n, this.simplex.noise(120000 + (this.j / (30 * s)), 120000 + (this.i / (0.2 * s))), 0.025);
-            n = mix(n, this.simplex.noise(120000 + (this.j / (0.2 * s)), 120000 + (this.i / (30 * s))), 0.025);
-            n = mix(n, this.simplex.noise(500000 + (this.j / (50 * s)), 500000 + (this.i / (0.3 * s))), 0.025);
-            n = mix(n, this.simplex.noise(500000 + (this.j / (0.3 * s)), 500000 + (this.i / (50 * s))), 0.025);
-            //n = mix(n, this.simplex.noise(this.j / (0.15 * s), 9000 + (this.i / (0.15 * s))), 0.02);
-            n = mix(n, this.simplex.noise(9000 + (this.j / (0.08 * s)), this.i / (0.09 * s)), 0.0075);
-            //n = mix(n, this.simplex.noise(this.j / (0.01 * s), 12000 + (this.i / (0.01 * s))), 0.0004);
+            var n = this.simplex.noise(this.j / this.mapScale, 3000 + (this.i / this.mapScale));
+            n = mix(n, this.simplex.noise(6000 + (this.j / this.s1a), 6000 + (this.i / this.s1b)), 0.025);
+            n = mix(n, this.simplex.noise(6000 + (this.j / this.s1b), 6000 + (this.i / this.s1a)), 0.025);
+            n = mix(n, this.simplex.noise(120000 + (this.j / this.s2a), 120000 + (this.i / this.s2b)), 0.025);
+            n = mix(n, this.simplex.noise(120000 + (this.j / this.s2b), 120000 + (this.i / this.s2a)), 0.025);
+            n = mix(n, this.simplex.noise(500000 + (this.j / this.s3a), 500000 + (this.i / this.s3b)), 0.025);
+            n = mix(n, this.simplex.noise(500000 + (this.j / this.s3b), 500000 + (this.i / this.s3a)), 0.025);
+            n = mix(n, this.simplex.noise(9000 + (this.j / this.wiggle), this.i / this.wiggle), 0.0075);
 
 
-
+            // map to ridgeData //
             var alt = n;
             n = mix(n, this.ridgeData[Math.round((alt + 1) * (this.ridgeDataLength/2))], 0.5);
-            n = mix(n, this.simplex.noise(10000 + (this.j / (1.35 * s)), this.i / (1.35 * s)), 0.7);
+            n = mix(n, this.simplex.noise(10000 + (this.j / this.undulate), this.i / this.undulate), 0.7);
 
+
+            // feedback into ridgedata //
             for (var k=0; k<this.feedback; k++) {
                 /*if (this.feedbackShift[k]) {
                     n = mix(n, this.simplex.noise((k * 20000) + (this.j / (1.35 * s)), this.i / (1.35 * s)), 0.2);
@@ -132,17 +105,9 @@ Paint.prototype.draw = function(speed) {
                 fillCol = color.blend2(this.col1, this.col2, n * 100);
             }
 
-            // add noise to color //
-            if (addNoise) {
-                var noiseLvl = tombola.rangeFloat(-this.noiseLevel,this.noiseLevel);
-                fillCol.R += noiseLvl;
-                fillCol.G += noiseLvl;
-                fillCol.B += noiseLvl;
-            }
-
 
             // draw //
-            color.fill(ctx, fillCol );
+            color.fill(ctx, fillCol);
             ctx.fillRect(this.j,this.i, 1, this.thickness);
 
             // done //
