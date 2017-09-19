@@ -2,4 +2,4 @@
 
 Crush texture algorithm.
 
-http://whitevinyldesign.com/crush/
+http://whitevinyldesign.com/experiments/crush/
